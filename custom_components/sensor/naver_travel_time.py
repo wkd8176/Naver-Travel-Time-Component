@@ -23,14 +23,11 @@ import homeassistant.util.dt as dt_util
 
 _LOGGER = logging.getLogger(__name__)
 
-CONF_API_KEY_ID = 'api_key_id'
+CONF_API_KEY_ID = 'client_id'
 CONF_DESTINATION = 'destination'
 CONF_ORIGIN = 'origin'
 
 DEFAULT_NAME = 'Naver Travel Time'
-
-ATTR_DURATION = 'duration'
-ATTR_DISTANCE = 'distance'
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=5)
 
