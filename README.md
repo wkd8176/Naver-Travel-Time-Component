@@ -18,13 +18,13 @@ home assistant 용 네이버 경로 소요시간 컴포넌트입니다.
   configuration.yaml에 아래 예와 같이 등록하시면 됩니다. entity id는 'sensor.설정한name'으로 설정됩니다. 완료하시면 그림과 같이 사용하실 수 있습니다.
   
     sensor:
-      - platform: naver_travel_time
-        name: 'Travel Time' #원하는 이름을 입력(entity id로 이용됨)
-        client_id: YOUR_CLIENT_ID #획득한 client id를 입력
-        api_key: YOUR_CLIENT_KEY #획득한 client key를 입력
-        origin: 127.1045942,37.3590548 #출발지를 입력
-                                       #(좌표를 latitude,longitude 로 입력, 또는 좌표를 출력하는 device_tracker, zone, sensor이용가능)
-        destination: #도착지를 입력(입력 방법은 출발지와 동일)
+      platform: naver_travel_time
+      name: 'Travel Time' #원하는 이름을 입력(entity id로 이용됨)
+      client_id: YOUR_CLIENT_ID #획득한 client id를 입력
+      api_key: YOUR_CLIENT_KEY #획득한 client key를 입력
+      origin: 127.1045942,37.3590548 #출발지를 입력
+                                     #(좌표를 latitude,longitude 로 입력, 또는 좌표를 출력하는 device_tracker, zone, sensor이용가능)
+      destination: #도착지를 입력(입력 방법은 출발지와 동일)
       
 4. SreenShot<br>
 <img width="355" alt="screenshot" src="https://user-images.githubusercontent.com/37936802/52165495-01ec4980-2745-11e9-86c1-d1ea2e3e1d45.png">
