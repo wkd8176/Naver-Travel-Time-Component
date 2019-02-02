@@ -26,5 +26,5 @@ home assistant 용 네이버 경로 소요시간 컴포넌트입니다.
                                        #(좌표를 latitude,longitude 로 입력, 또는 좌표를 출력하는 device_tracker, zone, sensor이용가능)
         destination: #도착지를 입력(입력 방법은 출발지와 동일)
       
-4. SreenShot<br>scre
-![ex_screenshot](./img/screenshot.png)
+4. SreenShot<br>
+<img width="355" alt="screenshot" src="https://user-images.githubusercontent.com/37936802/52165495-01ec4980-2745-11e9-86c1-d1ea2e3e1d45.png">
