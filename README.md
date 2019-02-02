@@ -20,7 +20,7 @@ home assistant 용 네이버 경로 소요시간 컴포넌트입니다.
 ##3. HA configuration.yaml 등록 방법
   configuration.yaml에 아래 예와 같이 등록하시면 됩니다. entity id는 'sensor.설정한name'으로 설정됩니다. 완료하시면 그림과 같이 사용하실 수 있습니다.
 
-    '''
+    '''yaml
     sensor:
       platform: naver_travel_time
       name: 'Travel Time' #원하는 이름을 입력(entity id로 이용됨)
