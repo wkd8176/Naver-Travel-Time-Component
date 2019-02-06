@@ -7,6 +7,7 @@ from datetime import timedelta
 import logging
 import requests
 import json
+import time
 from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 
 import voluptuous as vol
@@ -50,6 +51,11 @@ class APIError(Exception):
         self.code = code
         self.message = message
 
+class SamePositionError(APIError):
+    
+    def __init__(self):
+        pass
+
 def naver_direction_post(api_key_id, api_key, origin, destination):
     """ Request Naver Direction API servers"""
     
@@ -69,21 +75,27 @@ def naver_direction_post(api_key_id, api_key, origin, destination):
         'X-NCP-APIGW-API-KEY-ID': api_key_id,
         'X-NCP-APIGW-API-KEY': api_key
     }
-
-    res = requests.get(url, headers=headers)
-    out = res.json()
-
+    while True:
+        res = requests.get(url, headers=headers)
+        out = res.json()
+        if 'code' in out:
+            resultcode = out['code']
+            message = out['message']
+            if resultcode == 1:
+                _LOGGER.warning('Origin and Destination is Same. Retrying.')
+                time.sleep(300)
+                continue
+            elif resultcode == 0:
+                break
+            else:
+                raise APIError(resultcode, message)
+                
     # result json file for debug
     """
     with open('/config/naver_direction.json','w', encoding="utf-8") as dumpfile:
         json.dump(out, dumpfile, ensure_ascii=False, indent="\t")
     """
-    # Check for API Errors
-    if 'code' in out:
-        resultcode = out['code']
-        if resultcode != 0:
-            message = out['message']
-            raise APIError(resultcode, message)
+
     return out
 
 def convert_time_to_utc(timestr):
