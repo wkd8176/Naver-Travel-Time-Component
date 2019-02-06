@@ -51,11 +51,6 @@ class APIError(Exception):
         self.code = code
         self.message = message
 
-class SamePositionError(APIError):
-    
-    def __init__(self):
-        pass
-
 def naver_direction_post(api_key_id, api_key, origin, destination):
     """ Request Naver Direction API servers"""
     
