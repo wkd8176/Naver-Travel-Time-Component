@@ -70,6 +70,10 @@ def naver_direction_post(api_key_id, api_key, origin, destination):
         'X-NCP-APIGW-API-KEY-ID': api_key_id,
         'X-NCP-APIGW-API-KEY': api_key
     }
+
+    res = requests.get(url, headers=headers)
+    out = res.json()
+    """
     while True:
         res = requests.get(url, headers=headers)
         out = res.json()
@@ -84,7 +88,7 @@ def naver_direction_post(api_key_id, api_key, origin, destination):
                 break
             else:
                 raise APIError(resultcode, message)
-                
+    """
     # result json file for debug
     """
     with open('/config/naver_direction.json','w', encoding="utf-8") as dumpfile:
@@ -105,7 +109,6 @@ def setup_platform(hass, config, add_entities_callback, discovery_info=None):
     """Set up the Naver travel time platform."""
     def run_setup(event):
         """Delay the setup until Home Assistant is fully initialized.
-
         This allows any entities to be created already
         """
         if DATA_KEY not in hass.data:
@@ -221,8 +224,20 @@ class NaverTravelTimeSensor(Entity):
         self._origin = self._resolve_zone(self._origin)
 
         if self._destination is not None and self._origin is not None:
-            self._state = naver_direction_post(
-                self._api_key_id, self._api_key, self._origin, self._destination)
+            while True:
+                self._state = naver_direction_post(
+                    self._api_key_id, self._api_key, self._origin, self._destination)
+                if 'code' in self._state:
+                    resultcode = self._state['code']
+                    message = self._state['message']
+                    if resultcode == 1:
+                        _LOGGER.warning('Origin and Destination is Same. Retrying.')
+                        time.sleep(300)
+                        continue
+                    elif resultcode == 0:
+                        break
+                    else:
+                        raise APIError(resultcode, message)
 
     def _get_location_from_entity(self, entity_id):
         """Get the location from the entity state or attributes."""
@@ -267,4 +282,3 @@ class NaverTravelTimeSensor(Entity):
                 return self._get_location_from_attributes(entity)
 
         return friendly_name
-
