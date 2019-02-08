@@ -156,6 +156,7 @@ class NaverTravelTimeSensor(Entity):
         self._api_key = api_key
         self.valid_api_connection = True
         self._waypoint = None
+        self._waypoint_entity_id = None
         self._waypointlist = None
 
         # Check if location is a trackable entity
@@ -170,6 +171,9 @@ class NaverTravelTimeSensor(Entity):
             self._destination = destination
 
         if waypoints is not None:
+            self._waypoint = []
+            self._waypoint_entity_id = []
+            self._waypointlist = []
             for value in waypoints.values():
                 if value.split('.', 1)[0] in TRACKABLE_DOMAINS:
                     self._waypoint_entity_id.append(value)
@@ -231,7 +235,7 @@ class NaverTravelTimeSensor(Entity):
         if hasattr(self, '_waypoint_entity_id'):
             for value in self._waypoint_entity_id:
                 self._waypoint.append(
-                    self._get_location_from_entity(self.value)
+                    self._get_location_from_entity(value)
                 )
 
         self._destination = self._resolve_zone(self._destination)
@@ -248,7 +252,7 @@ class NaverTravelTimeSensor(Entity):
                     message = self._state['message']
                     if resultcode == 1:
                         _LOGGER.warning('Origin and Destination is Same. Retrying.')
-                        time.sleep(30)
+                        time.sleep(300)
                         if self._hass.state == CoreState.stopping:
                             break
                         else:
