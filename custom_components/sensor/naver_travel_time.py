@@ -12,6 +12,7 @@ from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 
 import voluptuous as vol
 
+from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.components.sensor import DOMAIN, PLATFORM_SCHEMA
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import (
@@ -27,6 +28,7 @@ _LOGGER = logging.getLogger(__name__)
 CONF_API_KEY_ID = 'client_id'
 CONF_DESTINATION = 'destination'
 CONF_ORIGIN = 'origin'
+CONF_WAYPOINT = 'waypoint'
 
 DEFAULT_NAME = 'Naver Travel Time'
 
@@ -40,6 +42,14 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_DESTINATION): cv.string,
     vol.Required(CONF_ORIGIN): cv.string,
     vol.Optional(CONF_NAME): cv.string,
+    vol.Optional(CONF_WAYPOINT): vol.All(
+        dict, vol.Schema({
+            vol.Optional('waypoint1'): cv.string,
+            vol.Optional('waypoint2'): cv.string,
+            vol.Optional('waypoint3'): cv.string,
+            vol.Optional('waypoint4'): cv.string,
+            vol.Optional('waypoint5'): cv.string,
+        }))
 })
 
 TRACKABLE_DOMAINS = ['device_tracker', 'sensor', 'zone']
@@ -51,13 +61,16 @@ class APIError(Exception):
         self.code = code
         self.message = message
 
-def naver_direction_post(api_key_id, api_key, origin, destination):
+def naver_direction_post(api_key_id, api_key, origin, destination, waypoint):
     """ Request Naver Direction API servers"""
     
     base_url = 'https://naveropenapi.apigw.ntruss.com/map-direction/v1/driving'
     path_url = '?start=' + origin + '&goal=' + destination
     option_url = '&option=trafast'
-    url = base_url + path_url + option_url
+    waypoint_url = ''
+    if waypoint is not None:
+        waypoint_url = '&waypoints=' + waypoint
+    url = base_url + path_url + option_url + waypoint_url
 
     # check url for debug
     """
@@ -73,22 +86,7 @@ def naver_direction_post(api_key_id, api_key, origin, destination):
 
     res = requests.get(url, headers=headers)
     out = res.json()
-    """
-    while True:
-        res = requests.get(url, headers=headers)
-        out = res.json()
-        if 'code' in out:
-            resultcode = out['code']
-            message = out['message']
-            if resultcode == 1:
-                _LOGGER.warning('Origin and Destination is Same. Retrying.')
-                time.sleep(300)
-                continue
-            elif resultcode == 0:
-                break
-            else:
-                raise APIError(resultcode, message)
-    """
+
     # result json file for debug
     """
     with open('/config/naver_direction.json','w', encoding="utf-8") as dumpfile:
@@ -125,9 +123,10 @@ def setup_platform(hass, config, add_entities_callback, discovery_info=None):
         api_key = config.get(CONF_API_KEY)
         origin = config.get(CONF_ORIGIN)
         destination = config.get(CONF_DESTINATION)
-
+        waypoints = config.get(CONF_WAYPOINT)     
+        
         sensor = NaverTravelTimeSensor(
-            hass, name, api_key_id, api_key, origin, destination)
+            hass, name, api_key_id, api_key, origin, destination, waypoints)
         hass.data[DATA_KEY].append(sensor)
 
         if sensor.valid_api_connection:
@@ -147,7 +146,7 @@ def setup_platform(hass, config, add_entities_callback, discovery_info=None):
 class NaverTravelTimeSensor(Entity):
     """Representation of a Naver travel time sensor."""
 
-    def __init__(self, hass, name, api_key_id, api_key, origin, destination):
+    def __init__(self, hass, name, api_key_id, api_key, origin, destination, waypoints):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
@@ -156,6 +155,8 @@ class NaverTravelTimeSensor(Entity):
         self._api_key_id = api_key_id
         self._api_key = api_key
         self.valid_api_connection = True
+        self._waypoint = None
+        self._waypointlist = None
 
         # Check if location is a trackable entity
         if origin.split('.', 1)[0] in TRACKABLE_DOMAINS:
@@ -167,6 +168,13 @@ class NaverTravelTimeSensor(Entity):
             self._destination_entity_id = destination
         else:
             self._destination = destination
+
+        if waypoints is not None:
+            for value in waypoints.values():
+                if value.split('.', 1)[0] in TRACKABLE_DOMAINS:
+                    self._waypoint_entity_id.append(value)
+                else:
+                    self._waypoint.append(value)        
 
         self.update()
 
@@ -220,20 +228,31 @@ class NaverTravelTimeSensor(Entity):
                 self._destination_entity_id
             )
 
+        if hasattr(self, '_waypoint_entity_id'):
+            for value in self._waypoint_entity_id:
+                self._waypoint.append(
+                    self._get_location_from_entity(self.value)
+                )
+
         self._destination = self._resolve_zone(self._destination)
         self._origin = self._resolve_zone(self._origin)
+        if self._waypoint is not None:
+            self._waypointlist = ':'.join(self._waypoint)
 
         if self._destination is not None and self._origin is not None:
             while True:
                 self._state = naver_direction_post(
-                    self._api_key_id, self._api_key, self._origin, self._destination)
+                    self._api_key_id, self._api_key, self._origin, self._destination, self._waypointlist)
                 if 'code' in self._state:
                     resultcode = self._state['code']
                     message = self._state['message']
                     if resultcode == 1:
                         _LOGGER.warning('Origin and Destination is Same. Retrying.')
-                        time.sleep(300)
-                        continue
+                        time.sleep(30)
+                        if self._hass.state == CoreState.stopping:
+                            break
+                        else:
+                            continue
                     elif resultcode == 0:
                         break
                     else:
