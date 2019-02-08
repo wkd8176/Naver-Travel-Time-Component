@@ -29,7 +29,7 @@ home assistant 용 네이버 경로 소요시간 컴포넌트입니다.
    - 서비스 환경설정에서 Web Service URL에 HA의 URL을 Port를 포함해 입력합니다.(외부접속 가능한 URL)
  
   4) 인증정보를 눌러 client id와 client key를 복사합니다.
- 
+
 HA configuration.yaml 등록 방법
 -----------------------------  
   configuration.yaml에 아래 예와 같이 등록하시면 됩니다. entity id는 'sensor.설정한name'으로 설정됩니다. 완료하시면 그림과 같이 사용하실 수 있습니다.
@@ -42,7 +42,9 @@ sensor:
   api_key: YOUR_CLIENT_KEY #획득한 client key를 입력
   origin: 127.1045942,37.3590548 #출발지를 입력
                                  #(좌표를 latitude,longitude 로 입력, 또는 좌표를 출력하는 device_tracker, zone, sensor이용가능)
-  destination: #도착지를 입력(입력 방법은 출발지와 동일)
+  destination: zone.home #도착지를 입력(입력 방법은 출발지와 동일)
+  waypoint:  #옵션으로 waypoint를 추가할 수 있습니다.(최대 5개)
+    waypoint1: #waypoint입력(입력방법은 출발지, 도착지와 동일)
 ~~~
 
 SreenShot
