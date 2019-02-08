@@ -232,7 +232,7 @@ class NaverTravelTimeSensor(Entity):
                 self._destination_entity_id
             )
 
-        if hasattr(self, '_waypoint_entity_id'):
+        if self._waypoint_entity_id is not None:
             for value in self._waypoint_entity_id:
                 self._waypoint.append(
                     self._get_location_from_entity(value)
