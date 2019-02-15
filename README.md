@@ -41,7 +41,7 @@ sensor:
   client_id: YOUR_CLIENT_ID #획득한 client id를 입력
   api_key: YOUR_CLIENT_KEY #획득한 client key를 입력
   origin: 127.1045942,37.3590548 #출발지를 입력
-                                 #(좌표를 latitude,longitude 로 입력, 또는 좌표를 출력하는 device_tracker, zone, sensor이용가능)
+                                 #(좌표를 longitude,latitude 로 입력, 또는 좌표를 출력하는 device_tracker, zone, sensor이용가능)
   destination: zone.home #도착지를 입력(입력 방법은 출발지와 동일)
   waypoint:  #옵션으로 waypoint를 추가할 수 있습니다.(최대 5개)
     waypoint1: #waypoint입력(입력방법은 출발지, 도착지와 동일)
