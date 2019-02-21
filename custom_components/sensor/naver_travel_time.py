@@ -153,7 +153,7 @@ class NaverTravelTimeSensor(Entity):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
-        self._unit_of_measurement = 'min'
+        self._unit_of_measurement = None
         self._state = None
         self._api_key_id = api_key_id
         self._api_key = api_key
@@ -196,8 +196,15 @@ class NaverTravelTimeSensor(Entity):
 
         _data = self._state['route']['trafast'][0]['summary']
         if 'duration' in _data:
-            return round((_data['duration']/1000/60), 1)
-        
+            duration_milliseconds = _data['duration']
+            duration_raw = round((duration_milliseconds/1000/60), 1)
+            if duration_raw < 60:
+                self._unit_of_measurement = 'min'
+                return duration_raw
+            elif duration_raw >= 60:
+                self._unit_of_measurement = 'hr'
+                return round((duration_raw/60), 1)
+
         return None
 
     @property
@@ -222,7 +229,7 @@ class NaverTravelTimeSensor(Entity):
                 res['duration'] = str(duration_raw) + 'min'
             elif duration_raw >= 60:
                 duration_hour = str(round((duration_raw/60), 1))
-                res['duration'] = duration_hour + 'hour'
+                res['duration'] = duration_hour + 'hr'
             if self._dtime is not None:
                 dtime_time = datetime.strptime(self._dtime, '%H:%M:%S').time()
                 dtime_date = date.today()
