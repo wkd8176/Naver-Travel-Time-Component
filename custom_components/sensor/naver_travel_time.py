@@ -221,7 +221,7 @@ class NaverTravelTimeSensor(Entity):
             if duration_raw < 60:
                 res['duration'] = str(duration_raw) + 'min'
             elif duration_raw >= 60:
-                duration_hour = str((round(duration_raw/60), 1))
+                duration_hour = str(round((duration_raw/60), 1))
                 res['duration'] = duration_hour + 'hour'
             if self._dtime is not None:
                 dtime_time = datetime.strptime(self._dtime, '%H:%M:%S').time()
