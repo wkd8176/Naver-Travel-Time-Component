@@ -33,6 +33,7 @@ home assistant 용 네이버 경로 소요시간 컴포넌트입니다.
 HA configuration.yaml 등록 방법
 -----------------------------  
   configuration.yaml에 아래 예와 같이 등록하시면 됩니다. entity id는 'sensor.설정한name'으로 설정됩니다. 완료하시면 그림과 같이 사용하실 수 있습니다.
+  departure_time과 arrival_time은 둘 중 하나만 선택이 가능합니다. 미입력 시 지금 시간 기준으로 자동 계산하여 출력합니다.
 
 ~~~yaml
 sensor:
@@ -43,6 +44,8 @@ sensor:
   origin: 127.1045942,37.3590548 #출발지를 입력
                                  #(좌표를 longitude,latitude 로 입력, 또는 좌표를 출력하는 device_tracker, zone, sensor이용가능)
   destination: zone.home #도착지를 입력(입력 방법은 출발지와 동일)
+  departure_time: '15:00:00' #출발 시간 입력, 입력 시 해당시간 기준으로 도착시간 출력, 미입력 시 now로 자동 지정(출발시간 지정 시 도착시간 지정 불가)
+  arrival_time: '16:00:00' #도착 시간 입력, 입력 시 해당시간 기준을 출발시간 출력(도착시간 지정 시 출발시간 지정 불가)
   waypoint:  #옵션으로 waypoint를 추가할 수 있습니다.(최대 5개)
     waypoint1: #waypoint입력(입력방법은 출발지, 도착지와 동일)
 ~~~
