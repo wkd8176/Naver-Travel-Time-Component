@@ -2,8 +2,7 @@
 naver_travel_time component
 made by Jay Yoon
 """
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, date, time, timedelta
 import logging
 import requests
 import json
@@ -42,6 +41,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_DESTINATION): cv.string,
     vol.Required(CONF_ORIGIN): cv.string,
     vol.Optional(CONF_NAME): cv.string,
+    vol.Exclusive('arrival_time', 'time'): cv.string,
+    vol.Exclusive('departure_time', 'time'): cv.string,
     vol.Optional(CONF_WAYPOINT): vol.All(
         dict, vol.Schema({
             vol.Optional('waypoint1'): cv.string,
@@ -123,10 +124,12 @@ def setup_platform(hass, config, add_entities_callback, discovery_info=None):
         api_key = config.get(CONF_API_KEY)
         origin = config.get(CONF_ORIGIN)
         destination = config.get(CONF_DESTINATION)
-        waypoints = config.get(CONF_WAYPOINT)     
-        
+        waypoints = config.get(CONF_WAYPOINT)
+        dtime = config.get('departure_time')
+        atime = config.get('arrival_time')
+
         sensor = NaverTravelTimeSensor(
-            hass, name, api_key_id, api_key, origin, destination, waypoints)
+            hass, name, api_key_id, api_key, origin, destination, waypoints, dtime, atime)
         hass.data[DATA_KEY].append(sensor)
 
         if sensor.valid_api_connection:
@@ -146,7 +149,7 @@ def setup_platform(hass, config, add_entities_callback, discovery_info=None):
 class NaverTravelTimeSensor(Entity):
     """Representation of a Naver travel time sensor."""
 
-    def __init__(self, hass, name, api_key_id, api_key, origin, destination, waypoints):
+    def __init__(self, hass, name, api_key_id, api_key, origin, destination, waypoints, dtime, atime):
         """Initialize the sensor."""
         self._hass = hass
         self._name = name
@@ -158,6 +161,8 @@ class NaverTravelTimeSensor(Entity):
         self._waypoint = None
         self._waypoint_entity_id = None
         self._waypointlist = None
+        self._dtime = dtime
+        self._atime = atime
 
         # Check if location is a trackable entity
         if origin.split('.', 1)[0] in TRACKABLE_DOMAINS:
@@ -207,10 +212,38 @@ class NaverTravelTimeSensor(Entity):
             return None
         _data = self._state['route']['trafast'][0]['summary']
         res={}
+
         if 'distance' in _data:
             res['distance'] = str(round((_data['distance']/1000), 1)) + 'km'
         if 'duration' in _data:
-            res['duration'] = str(round((_data['duration']/1000/60), 1)) + 'min'
+            duration_milliseconds = _data['duration']
+            duration_raw = round((duration_milliseconds/1000/60), 1)
+            if duration_raw < 60:
+                res['duration'] = str(duration_raw) + 'min'
+            elif duration_raw >= 60:
+                duration_hour = str(round(duration_raw/60)) 
+                duration_min = str(round(duration_raw - (duration_hour*60)))
+                res['duration'] = duration_hour + 'hour' + duration_min + 'min'
+            if self._dtime is not None:
+                dtime_time = datetime.strptime(self._dtime, '%H:%M:%S').time()
+                dtime_date = date.today()
+                dtime_datetime = datetime.combine(dtime_date, dtime_time)
+                duration_time = timedelta(milliseconds=duration_milliseconds)
+                res['departure_time'] = datetime.strftime(dtime_datetime,'%Y-%m-%d %H:%M:%S')
+                res['arrival_time'] = datetime.strftime((dtime_datetime + duration_time),'%Y-%m-%d %H:%M:%S')
+            elif self._atime is None:
+                dtime_datetime = datetime.now()
+                duration_time = timedelta(milliseconds=duration_milliseconds)
+                res['departure_time'] = 'now'
+                res['arrival_time'] = datetime.strftime((dtime_datetime + duration_time),'%Y-%m-%d %H:%M:%S')
+            elif self._atime is not None:
+                atime_time =  datetime.strptime(self._atime, '%H:%M:%S').time()
+                atime_date = date.today()
+                atime_datetime = datetime.combine(atime_date, atime_time)
+                duration_time = timedelta(milliseconds=duration_milliseconds)
+                res['departure_time'] = datetime.strftime((atime_datetime - duration_time),'%Y-%m-%d %H:%M:%S')
+                res['arrival_time'] = datetime.strftime(atime_datetime,'%Y-%m-%d %H:%M:%S')
+
         return res
 
     @property
