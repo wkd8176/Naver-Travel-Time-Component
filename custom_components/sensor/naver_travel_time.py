@@ -11,11 +11,10 @@ from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 
 import voluptuous as vol
 
-from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.components.sensor import DOMAIN, PLATFORM_SCHEMA
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import (
-    CONF_API_KEY, CONF_NAME, EVENT_HOMEASSISTANT_START, ATTR_LATITUDE,
+    CONF_API_KEY, CONF_NAME, EVENT_HOMEASSISTANT_START, EVENT_HOMEASSISTANT_STOP, ATTR_LATITUDE,
     ATTR_LONGITUDE, CONF_MODE)
 from homeassistant.util import Throttle
 import homeassistant.helpers.config_validation as cv
@@ -62,6 +61,12 @@ class APIError(Exception):
         self.code = code
         self.message = message
 
+class SamePlaceError(APIError):
+
+    def __init__(self):
+        _LOGGER.error('Origin and Destination is same. Retrying.')
+        pass
+
 def naver_direction_post(api_key_id, api_key, origin, destination, waypoint):
     """ Request Naver Direction API servers"""
     
@@ -94,8 +99,16 @@ def naver_direction_post(api_key_id, api_key, origin, destination, waypoint):
         json.dump(out, dumpfile, ensure_ascii=False, indent="\t")
     """
 
-    return out
-
+    if 'code' in out:
+        code = out['code']
+        message = out['message']
+        if code == 0:
+            return out
+        elif code == 1:
+            raise SamePlaceError()
+        else:
+            raise APIError(code, message)
+            
 def convert_time_to_utc(timestr):
     """Take a string like 08:00:00 and convert it to a unix timestamp."""
     combined = datetime.combine(
@@ -130,6 +143,7 @@ def setup_platform(hass, config, add_entities_callback, discovery_info=None):
 
         sensor = NaverTravelTimeSensor(
             hass, name, api_key_id, api_key, origin, destination, waypoints, dtime, atime)
+
         hass.data[DATA_KEY].append(sensor)
 
         if sensor.valid_api_connection:
@@ -183,10 +197,9 @@ class NaverTravelTimeSensor(Entity):
                 if value.split('.', 1)[0] in TRACKABLE_DOMAINS:
                     self._waypoint_entity_id.append(value)
                 else:
-                    self._waypoint.append(value)        
+                    self._waypoint.append(value)
 
         self.update()
-
 
     @property
     def state(self):
@@ -260,46 +273,43 @@ class NaverTravelTimeSensor(Entity):
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         """Get the latest data from Naver."""
-        # Convert device_trackers to location
-        if hasattr(self, '_origin_entity_id'):
-            self._origin = self._get_location_from_entity(
-                self._origin_entity_id
-            )
+        def stop(event):
+            return True
 
-        if hasattr(self, '_destination_entity_id'):
-            self._destination = self._get_location_from_entity(
-                self._destination_entity_id
-            )
+        while True:
+            try:
+                # Convert device_trackers to location
+                if hasattr(self, '_origin_entity_id'):
+                    self._origin = self._get_location_from_entity(
+                        self._origin_entity_id
+                    )
 
-        if self._waypoint_entity_id is not None:
-            for value in self._waypoint_entity_id:
-                self._waypoint.append(
-                    self._get_location_from_entity(value)
-                )
+                if hasattr(self, '_destination_entity_id'):
+                    self._destination = self._get_location_from_entity(
+                        self._destination_entity_id
+                    )
 
-        self._destination = self._resolve_zone(self._destination)
-        self._origin = self._resolve_zone(self._origin)
-        if self._waypoint is not None:
-            self._waypointlist = ':'.join(self._waypoint)
+                if self._waypoint_entity_id is not None:
+                    for value in self._waypoint_entity_id:
+                        self._waypoint.append(
+                            self._get_location_from_entity(value)
+                        )
 
-        if self._destination is not None and self._origin is not None:
-            while True:
-                self._state = naver_direction_post(
-                    self._api_key_id, self._api_key, self._origin, self._destination, self._waypointlist)
-                if 'code' in self._state:
-                    resultcode = self._state['code']
-                    message = self._state['message']
-                    if resultcode == 1:
-                        _LOGGER.warning('Origin and Destination is Same. Retrying.')
-                        time.sleep(300)
-                        if self._hass.state == CoreState.stopping:
-                            break
-                        else:
-                            continue
-                    elif resultcode == 0:
-                        break
-                    else:
-                        raise APIError(resultcode, message)
+                self._destination = self._resolve_zone(self._destination)
+                self._origin = self._resolve_zone(self._origin)
+                if self._waypoint is not None:
+                    self._waypointlist = ':'.join(self._waypoint)
+
+                if self._destination is not None and self._origin is not None:
+                    self._state = naver_direction_post(
+                        self._api_key_id, self._api_key, self._origin, self._destination, self._waypointlist)
+                break
+            except SamePlaceError:
+                time.sleep(300)
+                if event.event_type == EVENT_HOMEASSISTANT_STOP:
+                    break
+                else:
+                    continue
 
     def _get_location_from_entity(self, entity_id):
         """Get the location from the entity state or attributes."""
