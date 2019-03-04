@@ -65,7 +65,6 @@ class APIError(Exception):
 class SamePlaceError(APIError):
 
     def __init__(self):
-        _LOGGER.error('Origin and Destination is same. Retrying.')
         pass
 
 def naver_direction_post(api_key_id, api_key, origin, destination, waypoint):
@@ -302,6 +301,7 @@ class NaverTravelTimeSensor(Entity):
                     self._api_key_id, self._api_key, self._origin, self._destination, self._waypointlist)
 
         except SamePlaceError:
+            _LOGGER.error('sensor.'+ self.name +' has same cordinates between Origin and Destination. Retrying.')
             self._state = None
         except APIError:
             self._state = None
