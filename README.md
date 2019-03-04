@@ -6,7 +6,7 @@ home assistant 용 네이버 경로 소요시간 컴포넌트입니다.
 
 설치방법
 ---------
-  custom_components/sensor 폴더에 naver_travel_time.py를 복사합니다.
+  custom_components/naver_travel_time 폴더에 sensor.py를 복사합니다.
   
 네이버 지도 api key 획득 방법
  --------------------------  
