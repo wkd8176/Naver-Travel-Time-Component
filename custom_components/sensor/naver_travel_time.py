@@ -11,6 +11,7 @@ from urllib.parse import urljoin, urlencode, urlparse, parse_qs
 
 import voluptuous as vol
 
+from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.components.sensor import DOMAIN, PLATFORM_SCHEMA
 from homeassistant.helpers.entity import Entity
 from homeassistant.const import (
@@ -273,43 +274,39 @@ class NaverTravelTimeSensor(Entity):
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         """Get the latest data from Naver."""
-        def stop(event):
-            return True
+        try:
+            # Convert device_trackers to location
+            if hasattr(self, '_origin_entity_id'):
+                self._origin = self._get_location_from_entity(
+                    self._origin_entity_id
+                )
 
-        while True:
-            try:
-                # Convert device_trackers to location
-                if hasattr(self, '_origin_entity_id'):
-                    self._origin = self._get_location_from_entity(
-                        self._origin_entity_id
+            if hasattr(self, '_destination_entity_id'):
+                self._destination = self._get_location_from_entity(
+                    self._destination_entity_id
+                )
+
+            if self._waypoint_entity_id is not None:
+                for value in self._waypoint_entity_id:
+                    self._waypoint.append(
+                        self._get_location_from_entity(value)
                     )
 
-                if hasattr(self, '_destination_entity_id'):
-                    self._destination = self._get_location_from_entity(
-                        self._destination_entity_id
-                    )
+            self._destination = self._resolve_zone(self._destination)
+            self._origin = self._resolve_zone(self._origin)
+            if self._waypoint is not None:
+                self._waypointlist = ':'.join(self._waypoint)
 
-                if self._waypoint_entity_id is not None:
-                    for value in self._waypoint_entity_id:
-                        self._waypoint.append(
-                            self._get_location_from_entity(value)
-                        )
+            if self._destination is not None and self._origin is not None:
+                self._state = naver_direction_post(
+                    self._api_key_id, self._api_key, self._origin, self._destination, self._waypointlist)
 
-                self._destination = self._resolve_zone(self._destination)
-                self._origin = self._resolve_zone(self._origin)
-                if self._waypoint is not None:
-                    self._waypointlist = ':'.join(self._waypoint)
+        except SamePlaceError:
+            self._state = None
+        except APIError:
+            self._state = None
 
-                if self._destination is not None and self._origin is not None:
-                    self._state = naver_direction_post(
-                        self._api_key_id, self._api_key, self._origin, self._destination, self._waypointlist)
-                break
-            except SamePlaceError:
-                time.sleep(300)
-                if event.event_type == EVENT_HOMEASSISTANT_STOP:
-                    break
-                else:
-                    continue
+        
 
     def _get_location_from_entity(self, entity_id):
         """Get the location from the entity state or attributes."""
