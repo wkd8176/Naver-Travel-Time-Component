@@ -301,7 +301,7 @@ class NaverTravelTimeSensor(Entity):
                     self._api_key_id, self._api_key, self._origin, self._destination, self._waypointlist)
 
         except SamePlaceError:
-            _LOGGER.error('sensor.'+ self.name +' has same cordinates between Origin and Destination. Retrying.')
+            _LOGGER.warning('sensor.%s has same cordinates between Origin and Destination. Retrying.', self.name)
             self._state = None
         except APIError:
             self._state = None
