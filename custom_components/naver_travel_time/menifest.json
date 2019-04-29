@@ -1,0 +1,10 @@
+{
+  "domain": "naver_travel_time",
+  "name": "Naver travel time",
+  "documentation": "https://github.com/wkd8176/Naver-Travel-Time-Component",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": [
+    "@wkd8176"
+  ]
+}
